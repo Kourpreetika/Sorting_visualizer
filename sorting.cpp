@@ -1,4 +1,4 @@
-#include<SDL.h>
+#include<SDL2/SDL.h>
 #include<iostream>
 #include<limits>
 #include<time.h>
@@ -6,10 +6,14 @@
 using namespace std;
 
 const int SCREEN_WIDTH=910;
+
 const int SCREEN_HEIGHT=750;
 
 const int arrSize=130;
 const int rectSize=7;
+
+/* Narrower stripe inside each column (GIF-style “thin vertical lines”). */
+const int BAR_DRAW_WIDTH=4;
 
 int arr[arrSize];
 int Barr[arrSize];
@@ -67,36 +71,45 @@ void close()
 
 void visualize(int x=-1, int y=-1, int z=-1)
 {
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    /* dipesh-m / GitHub Sorting-Visualizer sample: opaque black canvas. */
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-    int j=0;
-    for(int i=0; i<=SCREEN_WIDTH-rectSize; i+=rectSize)
+    int j = 0;
+    int bw = BAR_DRAW_WIDTH;
+    if(bw > rectSize) bw = rectSize;
+    if(bw < 1) bw = 1;
+    int xPad = (rectSize - bw) / 2;
+
+    for(int i = 0; i <= SCREEN_WIDTH - rectSize; i += rectSize)
     {
         SDL_PumpEvents();
 
-        SDL_Rect rect={i, 0, rectSize, arr[j]};
+        SDL_Rect rect = { i + xPad, SCREEN_HEIGHT - arr[j], bw, arr[j] };
+
         if(complete)
         {
-            SDL_SetRenderDrawColor(renderer, 100, 180, 100, 0);
-            SDL_RenderDrawRect(renderer, &rect);
-        }
-        else if(j==x || j==z)
-        {
-            SDL_SetRenderDrawColor(renderer, 100, 180, 100, 0);
+            SDL_SetRenderDrawColor(renderer, 120, 200, 120, 255);
             SDL_RenderFillRect(renderer, &rect);
         }
-        else if(j==y)
+        else if(j == x || j == z)
         {
-            SDL_SetRenderDrawColor(renderer, 165, 105, 189, 0);
+            SDL_SetRenderDrawColor(renderer, 255, 60, 60, 255);
+            SDL_RenderFillRect(renderer, &rect);
+        }
+        else if(j == y)
+        {
+            SDL_SetRenderDrawColor(renderer, 190, 130, 220, 255);
             SDL_RenderFillRect(renderer, &rect);
         }
         else
         {
-            SDL_SetRenderDrawColor(renderer, 170, 183, 184, 0);
-            SDL_RenderDrawRect(renderer, &rect);
+            /* Near-white bars like the reference GIF (not flat gray). */
+            SDL_SetRenderDrawColor(renderer, 245, 245, 248, 255);
+            SDL_RenderFillRect(renderer, &rect);
         }
         j++;
+        if(j >= arrSize) break;
     }
     SDL_RenderPresent(renderer);
 }
@@ -362,8 +375,7 @@ void randomizeAndSaveArray()
     srand(seed);
     for(int i=0; i<arrSize; i++)
     {
-        int random=rand()%(SCREEN_HEIGHT);
-        Barr[i]=random;
+        Barr[i] = rand() % SCREEN_HEIGHT;
     }
 }
 
@@ -371,12 +383,15 @@ void execute()
 {
     if(!init())
     {
-        cout<<"SDL Initialization Failed.\n";
+        cerr<<"SDL Initialization Failed.\n";
     }
     else
     {
         randomizeAndSaveArray();
         loadArr();
+
+        cout<<"\nGRAPHICS WINDOW OPEN. Click it so it has focus, then press 0-6 or q "
+              "(keys do not affect this console).\n"<<flush;
 
         SDL_Event e;
         bool quit=false;
